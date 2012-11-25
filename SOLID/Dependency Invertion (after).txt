@@ -1,0 +1,23 @@
+procedure TCTEditor.InsSeeTextOfPrevVersion;
+var
+  vPar: TRTFParag;
+begin
+  BeginTransaction;
+  try
+    vPar := TRTFParag.Create(nil, False, False, raWidth);
+    vPar.SetStr('(см. текст в предыдущей редакции)');
+    InsertParag(vPar, CaretPos);
+    ActSetCaretPos(MakeCaretPos(0, CaretPos));
+    SelClear;
+    SetVst(vtPmr);
+    CommitTransaction;
+  except
+    RollbackTransaction;
+    raise;
+  end;
+end;
+
+procedure TfmCTMain.actInsPmrSmExecute(Sender: TObject);
+begin
+  CurrCTEditor.InsSeeTextOfPrevVersion;
+end;

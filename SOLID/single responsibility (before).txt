@@ -1,0 +1,99 @@
+TRegistrationControl = class
+  private
+    FRegistrationInfo: TRegistrationInfo;
+    FFirstKeyModul: AnsiString;
+    FSecondKeyModul: AnsiString;
+    FFirstExponent: AnsiString;
+    FSecondExponent: AnsiString;
+    FCurrentDate: TDate;
+    FExpansion: String;
+    FCompanyName: String;
+    FProgramSerialNamber: Word;
+    FDateEndReg: TDate;
+    FSignature: AnsiString;
+    FRegistrationCode: String;
+    FDateBeginReg: TDate;
+    FRSASignature: TRSASignatureBlock;
+    FFileKeyExcept: Boolean;
+    FSignatureExcept: Boolean;
+    (*Посе полного перехода на новый вариант регистрации удалить процедуру и связанные с ней переменные *)
+    function GetMACAddress: TMacAddress;
+    // процедура деинсталяции сервиса
+    function UnRegistrationService(const aProgressStr: String; const aSilentMode: Boolean): Boolean;
+    // функция проверяет имеет ли пользователь права администратора
+    function IsAdminRights: Boolean;
+    // вытаскивает exe файл из ресника который присоединен к проекту
+    function ExtractFileFromResTo(const aFileName: String; const aSoursName: String): Boolean;
+    // Передает сервису событе на выполнение действий
+    function SendServiceStateEvent(const aEventName: String): Boolean;
+    // преобразует сообщение полученное от сервиса в нормальный вид
+    function GetUnMixMessageString(const aMessageStr: String): String;
+    // получаем данные из сообщения от сервиса
+    procedure SetData(var aRegistrationInfo: TRegistrationInfo);
+    // Получаем системную информацию от сервиса
+    function GetSystemInfo(var aRegistrationInfo: TRegistrationInfo): Boolean;
+    // Проверяем есть ли файлик key с параметрами новой регистрации
+    // при переходе на новую регистрацию необходимость в файлике пропадет
+    function NewFileKeyExist(const aDirectoryKeyFile, aProgramName: String): Boolean;
+    // Получаем тип регистрации старый тип с серийником раздела и мак адресом
+    // или новый с серийником жесткого (при полном переходе удалить)
+    function GetRegistrationType(const aDirectoryKeyFile, aProgramName: String): Integer;
+    // функция проверки файла key будет удалена при переходе на новый вариант регистрации
+    function CheckKey(aStrKeyList: TStringList; out aFindParamStr: String): Boolean;
+    // процедура 2 пути регистрации :P
+    function CheckKeyCRC(aDataFileKey: TStringList; const aNameProduct: String;
+    out aStrParamList: TStringList): Boolean;
+    // функция генерации регистрационного ключа (новой версии)
+    function GetCRCCode(const aСontractCode: Word): String;
+    // старый вариант регистрации ключа
+    function GetRegCode(const aСontractCode: Word): String;
+    // получаем путь к файлу сервиса
+    function GetServiceFileName: string;
+    // Если программа не зарегистрирована выдает сообщение
+    procedure ShowNoRegistrationMessage(var aShowRegistrationForm: Boolean; const aKeyDir: string);
+    // Проверяет состояние сервиса, при неполадках пытается исправить ошибку
+    procedure CheckVersionService(const aSilentMode: Boolean; var aUpdateVersion: Boolean);
+    // Проверка того, что нужно сообщить пользователю о необходимости сгенерировать новый регистрационный код.
+    // В последствии, при отказе от старого формата рег. ключа, нужно будет удалить.
+    function ISShowReminder: Boolean;
+    // истек ли срок регистрации
+    function EndTimeRegistration: Boolean;
+    // получаем версию разработки сервиса защиты
+    procedure SetVersionService;
+  public
+    (* После полного перехода на новый вариант регистрации две переменные с первой регистрацией необходимо удалить *)
+    constructor Create(const aFirstKeyModul, aFirstExponent, aSecondExponent,
+      aSecondKeyModul: AnsiString; aProgramName: string);
+    // Рекомендуется использовать эту функцию вместо дельфовой, т.к. Дельфовая в некоторых случаях не применяет настройки, заданные в initialization данного модуля
+    function TryStrToDateRus(const aStrdate: string; out aValue: TDateTime): Boolean;
+    function StrToDateRus(const aStrDate: String): TDateTime;
+    function HexToInt(aHex: String): Integer;
+    function DateToStr(aDate: TDate): String;
+    procedure GetSign(aSender: TObject; var aSignature: TRSASignatureBlock);
+    // Проверяет состояние сервиса если он запущен то истина
+    function IsServiceRun: Boolean;
+    // Проверяем зарегина прога или нет :)
+    function CheckProgramRegistered(const aDirectoryKeyFile: String): Boolean;
+    // Получаем регистрационный код
+    function GetRegistrationCode(const aSerialNumber: Word): String;
+    // Проверки состояния сервиса, если сервис не установлен, то предлагает его установить
+    function IsRegistrationService(const aSilentMode: Boolean): Boolean;
+    // Устанавливает сервис не выдавая никаких сообщений (используется в Setup'е Контекста и при обычном запуске Контекста)
+    procedure InstallService;
+    // Удаляет сервис не выдавая никаких сообщений (используется в UnInstall'е Контекста)
+    procedure UninstallService;
+    // действия которые выполняются после активации главной формы
+    function ActionAfterActivateProgram(const aKeyDir: string): TActionAfterActivate;
+
+    property RegistrationInfo: TRegistrationInfo read FRegistrationInfo;
+    property CurrentDate: TDate read FCurrentDate;
+    property SerialNamber: Word read FProgramSerialNamber;
+    property RegistrationCode: String read FRegistrationCode;
+    property DateBeginReg: TDate read FDateBeginReg;
+    property DateEndReg: TDate read FDateEndReg;
+    property CompanyName: String read FCompanyName;
+    property Signature: AnsiString  read FSignature;
+    property Expansion: String read FExpansion;
+    property FileKeyExcept: Boolean read FFileKeyExcept;
+    property SignatureExcept: Boolean read FSignatureExcept;
+  end;

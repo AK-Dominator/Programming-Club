@@ -1,0 +1,22 @@
+procedure TfmCTMain.actInsPmrSmExecute(Sender: TObject);
+var
+  vPar: TRTFParag;
+begin
+  // Добавляю текст
+  with CurrCTEditor do
+  begin
+    BeginTransaction;
+    try
+      vPar := TRTFParag.Create(nil, False, False, raWidth);
+      vPar.SetStr('(см. текст в предыдущей редакции)');
+      InsertParag(vPar, CaretPos);
+      ActSetCaretPos(MakeCaretPos(0, CaretPos));
+      SelClear;
+      SetVst(vtPmr);
+      CommitTransaction;
+    except
+      RollbackTransaction;
+      raise;
+    end;
+  end;
+end;

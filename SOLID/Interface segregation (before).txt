@@ -1,0 +1,67 @@
+  IDocEditor = interface
+    ['{DF6D2215-DAA9-4905-B5A9-AD5062A1E1AD}']
+    function GetHighlight(const aParPos: TCaretPos): THighlight;
+
+    // Ќазвание документа (обычно им€ файла, но может быть и другим признаком)
+    function DocName: String;
+
+    procedure BeginTransaction;
+    procedure RollbackTransaction;
+    function CommitTransaction: Boolean;
+    procedure ActSetCaretPos(const Pos: TCaretPos);
+    procedure SetCaretPos(const aValue: TCaretPos);
+    function GetCaretPos: TCaretPos;
+    property CaretPos: TCaretPos read GetCaretPos write SetCaretPos;
+    procedure DeleteSubStr(const Pos: TCaretPos; const Count: Integer; FreeChange: Boolean = False);
+    procedure InsertSubStr(const S: String; const Pos: TCaretPos; aMObjs: TCommonList = nil; const aDesign: TParagDesign = nil);
+
+    function ItemsCount: Integer;
+    // ѕеречисл€ет все абзацы документа
+    function AllPars: TParagsEnumerator;
+
+    procedure DeleteParag(const aParPos: TCaretPos);
+    procedure InsertParag(const aParag: TParag; const aParPos: TCaretPos);
+    function RTFParag(const aParPos: TCaretPos): TRTFParag;
+    function Parag(const aParPos: TCaretPos): TParag;
+
+    // ѕолучить номер строки таблицы, которой соответствует ее представитель в документе
+    function TblRowByItem(const aItemInd: Integer): Integer;
+    // ѕолучить таблицу, по номеру элемента в документа
+    function Tbl(const aItemInd: Integer): TDTable;
+    // ѕолучить €чейку по позиции каретки
+    function Cell(const aCaretPos: TCaretPos): TCell;
+    // ѕровер€ет есть ли в документе дин. таблицы
+    function TablesExists: Boolean;
+    // ѕровер€ет €вл€етс€ ли элемент обычным абзацем
+    function ItemIsParag(const aItemInd: Integer): Boolean;
+    // ѕровер€ет €вл€етс€ ли элемент представителем строки какой-нибудь таблицы
+    function ItemIsTblRow(const aItemInd: Integer): Boolean;
+    // возвращает True, если каретка находитс€ за правой границей таблицы
+    function IsCaretBehindTable(const aCaretPos: TCaretPos): Boolean;
+    // ¬озвращает позицию каретки начала документа (может отличатьс€ в зависимости от наличи€ или отсутстви€ таблицы в начале документа)
+    function DocStart: TCaretPos;
+    // ¬озвращает позицию каретки конца документа (может отличатьс€ в зависимости от наличи€ или отсутстви€ таблицы в конце документа)
+    function DocEnd: TCaretPos;
+
+    function GetWriteContainer(const aDocInfo: TDocInfo): TDocWriteContainer;
+
+    procedure SetPrevCaretPos(const aCaretPos: TCaretPos);
+    function GetPrevCaretPos: TCaretPos;
+    property PrevCaretPos: TCaretPos read GetPrevCaretPos write SetPrevCaretPos;
+
+    procedure SetLockPrevCaretPosChange(const aValue: Boolean);
+    function GetLockPrevCaretPosChange: Boolean;
+    property LockPrevCaretPosChange: Boolean read GetLockPrevCaretPosChange write SetLockPrevCaretPosChange;
+
+    // ѕолучить номер абзаца, содержащего заголовок пол€ карточки. -1, если не найден
+    function FindField(const aFieldNo: Integer): Integer;
+
+    // ѕреобразование позициии курсора в тексте в CTF-папку
+    function CreateCTFolder(const aCaretPos: TCaretPos; const aCustomFName: TFileName = ''): TFolder;
+
+    // ѕеречисл€ет все абзацы заданного диапазона
+    function ParRange(const aFrom, aTo: TCaretPos): TParagsEnumerator;
+    // ќбрабатывает ссылки документа в указанном диапазоне абзацев процедурой Proc.
+    // ≈сли Proc возвращает пустую строку, то ссылку следует удалить
+    procedure ProcessRefs(const aFrom, aTo: TCaretPos; const Proc: TReplRefProc; aProcMulti: Boolean = False);
+  end;
