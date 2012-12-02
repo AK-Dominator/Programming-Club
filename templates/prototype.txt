@@ -1,0 +1,5 @@
+Иногда использую такой шаблон, когда нужно создать немного измененную копию уже существующего объекта. Выглядит это примерно так:
+  vPar.Assign(Parag(aCaretPos));
+  vPar.OnChange := nil;
+  vPar.OnTextChange := nil;
+  vPar.SetExtStr(vStr);

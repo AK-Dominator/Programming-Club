@@ -1,0 +1,67 @@
+Это описание базового класса команды:
+
+  TBasicAction = class
+  private
+    FExecuted: Boolean;
+    FEditor: TBasicEditor;
+  protected
+    procedure SetEditor(Value: TBasicEditor); virtual;
+    procedure DoExecute; virtual; abstract;
+    procedure DoUnexecute; virtual; abstract;
+    function GetEdit: Boolean; virtual;
+  public
+    constructor Create;
+    procedure Execute;
+    procedure Unexecute;
+    property Executed: Boolean read FExecuted; // Признак того, что действие было выполнено
+    property Edit: Boolean read GetEdit; // Признак, что действие производит изменение текста (включая теги, отступы и т.д.)
+  end;
+
+Это описание конкретной команды (задание выравнивания текста в абзаце):
+  TSetAlignAction = class(TBasicAction)
+  private
+    FParPos: TCaretPos;
+    FAlign: TRTFAlign;
+  protected
+    procedure DoExecute; override;
+    procedure DoUnexecute; override;
+    function GetEdit: Boolean; override;
+  public
+    constructor Create(const aParPos: TCaretPos; const aAlign: TRTFAlign);
+  end;
+
+А это его реализация:
+{ TSetAlignAction }
+
+procedure TSetAlignAction.DoExecute;
+var
+  OldAlign: TRTFAlign;
+begin
+  inherited;
+  with FEditor.Parag(FParPos) do
+  begin
+    OldAlign := Align;
+    Align := FAlign;
+    FAlign := OldAlign;
+  end;
+end;
+
+procedure TSetAlignAction.DoUnexecute;
+begin
+  DoExecute;
+end;
+
+function TSetAlignAction.GetEdit: Boolean;
+begin
+  Result := True;
+end;
+
+constructor TSetAlignAction.Create(const aParPos: TCaretPos; const aAlign:
+  TRTFAlign);
+begin
+  FParPos := aParPos;
+  FAlign := aAlign;
+end;
+
+Соответственно в редакторе сохраняется список таких команд, можно их откатывать.
+Кстати, еще реализована транзакционность команд, то есть в редакторе реализованы методы BeginTransaction, CommitTransaction и RollbackTransaction. Если произошла какое-то исключение после того, как была открыта транзакция, то все изменения откатываются до момента ее открыти.

@@ -1,0 +1,262 @@
+интерфейсная часть
+
+  // Класс, для хронения полей, отображаемых в карточке
+  // паттерн "Одиночка"
+  TCardRecords = class
+  private
+    FItems: TCFields;
+
+    constructor Create;
+  public
+    property Items: TCFields read FItems;
+
+    class function CreateOne: TCardRecords;
+    class procedure ReleaseInstance;
+
+    procedure LoadFromFile(const aStr: String);
+    procedure SaveToFile(const aStr: String);
+
+    // Выбирает для выбранной строки нужное поле
+    function StrToField(const aStr: String): TCardRecord;
+    // Заполняет списком полей, содержащихся в профиле
+    procedure SetFromProfile;
+
+    procedure Clear;
+
+    // Получает словарь для определенного поля (тот кто вызывает функцию должен уничтожать возвращенный справочник)
+    // при вызове нужно проверять EProfNotFound и EDictNotFount
+    function GetDict(const aNum: Integer): TDict;
+  end;
+
+реализация
+
+{ TCardRecords }
+
+procedure TCardRecords.Clear;
+begin
+  FItems := nil;
+end;
+
+constructor TCardRecords.Create;
+begin
+  inherited Create;
+
+  SetFromProfile;
+end;
+
+class function TCardRecords.CreateOne: TCardRecords;
+{$J+}
+  const FInstance: TCardRecords = nil;
+{$J-}
+begin
+  if not Assigned (FInstance) then
+    FInstance := Create;
+
+  Result := FInstance;
+end;
+
+function TCardRecords.GetDict(const aNum: Integer): TDict;
+  procedure MsgProfNotFound;
+  begin
+    raise EProfNotFound.Create(cDictsNotFound);
+  end;
+
+  procedure MsgDictNotFound(const aName: String);
+  begin
+    raise EDictNotFount.Create('Файл "' + aName + '" не найден.'#13#10 + cNeedProfile);
+  end;
+
+var
+  i: Integer;
+  vIndex: Integer;
+  vCardFieldList: TCardFieldList;
+  vHead: THead;
+  vTagDictField: TTagDictField;
+begin
+  Result := TDict.Create;
+
+  if Assigned(Profile) then
+  begin
+    vCardFieldList := Profile.CardFieldList;
+    vIndex := vCardFieldList.FieldIndex(aNum);
+    if vIndex >= 0 then
+      vHead := vCardFieldList[vIndex].Head
+    else
+      Assert(False, Format(cDictForFieldNotFound, [aNum]));
+
+    case vHead.FieldType of
+      ftpNumeral, ftpDate, ftpText: ; //словари не требуются
+      ftpDict:
+      begin
+        case vHead.Tag of
+          tgNone, tgPrinOrg, tgVid:
+          begin
+            vTagDictField := (Profile.CardFieldList.Items[vIndex] as TTagDictField);
+            Result.DictType := dtStrList;
+            if vHead.Number <> cProgramTest then
+            begin
+              SetLength(Result.FStrList, vTagDictField.TagRecList.Count);
+
+              for i := 0 to vTagDictField.TagRecList.Count - 1 do
+                Result.FStrList[i] := vTagDictField.TagRecList[i].Title;
+            end
+            else begin
+              SetLength(Result.FStrList, vTagDictField.TagRecList.Count);
+              for i := 0 to vTagDictField.TagRecList.Count - 1 do
+                Result.FStrList[i] := vTagDictField.TagRecList[i].Title;
+            end;
+          end;
+          tgChar:
+          begin
+            vTagDictField := (Profile.CardFieldList.Items[vIndex] as TTagDictField);
+            Result.DictType := dtStrCharList;
+            SetLength(Result.FStrCharList, vTagDictField.TagRecList.Count);
+            for i := 0 to vTagDictField.TagRecList.Count - 1 do
+            begin
+              Result.StrCharList[i].Str := vTagDictField.TagRecList[i].Title;
+              Assert(Length(vTagDictField.TagRecList[i].ValueFromIndex[0]) > 0, 'В справочнике поля номер "' + IntToStr(aNum) + '" для строки "' + vTagDictField.TagRecList[i].Title + '" не указан соответствующий символ.');
+              Result.StrCharList[i].Char := vTagDictField.TagRecList[i].ValueFromIndex[0][1];
+            end;
+          end;
+          tgArbReg:
+          begin
+            vTagDictField := (Profile.CardFieldList.Items[vIndex] as TTagDictField);
+            Result.DictType := dtStrList;
+            SetLength(Result.FStrList, vTagDictField.TagRecList.Count + 1);
+            for i := 0 to vTagDictField.TagRecList.Count - 1 do
+              Result.StrList[i] := vTagDictField.TagRecList[i].Title;
+
+            Result.StrList[vTagDictField.TagRecList.Count] := '...';
+          end;
+        else
+          Assert(False, 'Неизвестный тип тэга.');
+        end;
+      end;
+      ftpTree:
+      begin
+        Result.FDictType := dtTreeList;
+        Result.TreeList := (Profile.CardFieldList.Items[vIndex] as TTreeField).TreeList;
+      end;
+    else
+      Assert(False, 'Неизвестный тип справочника.');
+    end;
+  end
+  else begin
+    ShowMessage('Словари не найдены.'#13#10'Запустите программу из редактора ConTEXT или скопируйте в каталог,'#13#10'где установлена программа, каталог "Справочники".');
+  end;
+end;
+
+class procedure TCardRecords.ReleaseInstance;
+var
+  vCardRecords: TCardRecords;
+begin
+  vCardRecords := TCardRecords.CreateOne;
+  if Assigned(vCardRecords) then
+    vCardRecords.Free;
+end;
+
+procedure TCardRecords.SetFromProfile;
+  function HeadToFieldClass(const aHead: THead): TFieldClass;
+  begin
+    Result := TFindIntegerField; // Просто, чтобы компилятор не говорил, что
+                                 // функция может вернуть неопределенное значение
+    case aHead.FieldType of
+      ftpNone: Assert(False, 'Неопределенный тип поля.');
+      ftpNumeral, ftpTree: Result := TFindIntegerField;
+      ftpDict:
+        begin
+          case aHead.Tag of
+            tgNone, tgPrinOrg, tgVid, tgArbReg: Result := TFindStringField;
+            tgChar: Result := TFindCharField;
+          else
+            Assert(False, 'Неизвестный тип тэга.');
+          end;
+        end;
+      ftpDate: Result := TFindDateField;
+      ftpText: Result := TFindTextField;
+    else
+      Assert(False, 'Неизвестный тип поля.');
+    end;
+  end;
+
+  procedure AddInfo(const aHead: THead;
+    const aClass: TFieldClass; const aDocParts: TDocParts = [];
+    const aGroup: TFieldGroupType = ftNone; const aSavePos: Boolean = True);
+  var
+    vLen: Integer;
+  begin
+    vLen := Length(FItems);
+    SetLength(FItems, vLen + 1);
+    FItems[vLen].Head := aHead;
+    FItems[vLen].FieldClass := aClass;
+    FItems[vLen].DocParts := aDocParts;
+    FItems[vLen].Grouping := aGroup;
+    FItems[vLen].SavePos := aSavePos;
+  end;
+var
+  i: Integer;
+  vCardFieldList: TCardFieldList;
+  vHead: THead;
+  vFieldClass: TFieldClass;
+  vDocParts: TDocParts;
+  vGrouping: TFieldGroupType;
+begin
+  FItems := nil;
+  if not Assigned(Profile) then
+    Exit;
+  if not Assigned(Profile.CardFieldList) then
+    Exit;
+
+  vCardFieldList := Profile.CardFieldList;
+
+  for i := 0 to vCardFieldList.Count - 1 do
+  begin
+    vHead := vCardFieldList[i].Head;
+    vFieldClass := HeadToFieldClass(vHead);
+
+    case vHead.Number of
+      cAllDocInBush: vDocParts := [dpKust];
+      cBackLinkType: vDocParts := [dpBackRefs];
+      cFoundedDocInBush: vDocParts :=  [dpShortKust];
+    else
+      vDocParts := [];
+    end;
+
+    case vHead.Number of
+      cDirectLinkType, cDirectLinkBody, cDirectLinkIB, cDirectLinkLabel, cDirectLinkO, cDirectLinkLocation, cDirectLinkDoc: vGrouping := ftRefs;
+      cContentText, cContentLavel, cContentLocation: vGrouping := ftContents;
+      18, cTextLocation: vGrouping := ftText;
+      cInvisibleText, cInvisTextLocation: vGrouping := ftInvisText;
+      cMispWords, cMispWordsExcl: vGrouping := ftMispWords;
+    else
+      vGrouping := ftNone;
+    end;
+
+    AddInfo(vHead, vFieldClass, vDocParts, vGrouping);
+  end;
+end;
+
+function TCardRecords.StrToField(const aStr: String): TCardRecord;
+var
+  i: Integer;
+  vStr: String;
+  vPos: Integer;
+  vNum: Integer;
+begin
+  if aStr = '' then
+    raise Exception.Create('Пустое поле.');
+  vStr := Trim(aStr);
+  vPos := Pos(' ', vStr);
+  if vPos <> 0 then
+    vStr := Copy(vStr, 1, vPos - 1);
+
+  if not TryStrToInt(vStr, vNum) then
+    raise Exception.Create('Параметр, переданный методу TCardRecords.StrToField, невозможно преобразовать в число.');
+
+  for i := 0 to High(Items) do
+    if Items[i].Head.Number = vNum then
+      Exit(Items[i]);
+
+  raise Exception.Create('Методу StrToField было передано неизвестное поле c номером: ' + IntToStr(vNum) + '.'+#13#10 +
+    'Проверьте, есть ли в текущем профиле справочник для поля номер "'+ IntToStr(vNum) + '".');
+end;
